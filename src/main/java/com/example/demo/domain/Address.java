@@ -23,6 +23,6 @@ public class Address {
     @OneToOne
     @JoinColumn(name ="user_id",nullable = false,unique = true)
     @Setter
-    private  User user;
+    private UserData user;
 
 }
