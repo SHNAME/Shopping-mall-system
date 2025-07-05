@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-public class User {
+public class UserData {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private  long id;
@@ -30,7 +30,7 @@ public class User {
 
     //사용자가 삭제된다고 해서 주문이 삭제는 x, 주문은 서버의 중요 Data
     @OneToMany(mappedBy = "user")
-    private List<Order> orderList = new ArrayList<>();
+    private List<UserOrder> orderList = new ArrayList<>();
 
     @OneToOne(cascade = CascadeType.ALL,orphanRemoval = true)
     @JoinColumn(name ="cart_id",nullable = false)
@@ -43,9 +43,9 @@ public class User {
         address.setUser(this);
     }
 
-    public void addOrder(Order order){
-        orderList.add(order);
-        order.setUser(this);
+    public void addOrder(UserOrder userOrder){
+        orderList.add(userOrder);
+        userOrder.setUser(this);
     }
 
 

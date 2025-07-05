@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-public class Order {
+public class UserOrder {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,7 +38,7 @@ public class Order {
     @ManyToOne
     @JoinColumn(name = "user_id",nullable = false)
     @Setter
-    private User user;
+    private UserData user;
 
     @Embedded
     @Column(nullable = false)
