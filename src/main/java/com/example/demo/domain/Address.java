@@ -25,4 +25,14 @@ public class Address {
     @Setter
     private UserData user;
 
+    public Address(String name,String phoneNumber,String address_line){
+        this.name = name;
+        this.phoneNumber = phoneNumber;
+        this.address_line = address_line;
+    }
+
+    public Address() {
+
+    }
+
 }

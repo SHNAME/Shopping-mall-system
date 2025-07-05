@@ -18,12 +18,14 @@ public class UserOrder {
     private long id;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
     @Column(nullable = false)
     private int total_price;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
 
     @Column(nullable = false)
