@@ -71,7 +71,7 @@ public class JwtTokenProvider {
 
         Collection<? extends  GrantedAuthority>authorities
                 = Arrays.stream(claims.get("auth").toString().split(","))
-                .map(SimpleGrantedAuthority::new)//auth의 각 문자열을 꺼내 배열로 만들고 각 문자열을 SimpleGrantedAutority 타입 객체로 변환
+                .map(SimpleGrantedAuthority::new)//auth의 각 문자열을 꺼내 배열로 만들고 각 문자열을 SimpleGrantedAuthority 타입 객체로 변환
                 .collect(Collectors.toList());
 
         UserDetails principal = new User(claims.getSubject(),"",authorities);
