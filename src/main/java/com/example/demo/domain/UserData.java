@@ -2,10 +2,7 @@ package com.example.demo.domain;
 
 import com.example.demo.en.Role;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -38,7 +35,7 @@ public class UserData implements UserDetails {
    @ElementCollection(fetch = FetchType.EAGER)
    @Enumerated(EnumType.STRING)
    @Column(nullable = false)
-   private List<Role> roles = new ArrayList<>();
+   private List<Role> roles;
 
     //1:1 관계 Mapping User가 주인으로, User 데이터가 저장, 삭제, 갱신할 때 Address도 같은 연산 처리
     @OneToOne(mappedBy = "user",cascade = CascadeType.ALL,orphanRemoval = true)
@@ -53,6 +50,7 @@ public class UserData implements UserDetails {
     @OneToOne(cascade = CascadeType.ALL,orphanRemoval = true)
     @JoinColumn(name ="cart_id",nullable = false)
     @Builder.Default
+    @Setter
     //장바구니 조회에 사용
     private Cart cart =new Cart();
 

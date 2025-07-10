@@ -1,6 +1,6 @@
 package com.example.demo.config;
 
-import com.example.demo.dto.JwtToken;
+import com.example.demo.dto.tokenDto.JwtToken;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -43,14 +43,14 @@ public class JwtTokenProvider {
         long now = (new Date()).getTime();
         
         //Access Token  생성
-        Date accessTokenExpires = new Date(now + 86400000);
+        Date accessTokenExpires = new Date(now + 30*60 *1000);
         String accessToken = Jwts.builder().setSubject(authentication.getName())
                 .claim("auth",authorities)
                 .setExpiration(accessTokenExpires)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
-        String refreshToken = Jwts.builder().setExpiration(new Date(now + 86400000))
+        String refreshToken = Jwts.builder().setExpiration(new Date(now + 7*24*60*60*1000))
                 .signWith(key,SignatureAlgorithm.HS256)
                 .compact();
 
