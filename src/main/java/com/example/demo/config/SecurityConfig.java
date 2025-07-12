@@ -33,11 +33,9 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/member/sign-in").permitAll()
-                        .requestMatchers("/member/sign-up").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
-                        .requestMatchers("/member/test").hasAuthority("ROLE_USER")
                         .anyRequest().authenticated()
 
                 )

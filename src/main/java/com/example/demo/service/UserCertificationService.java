@@ -1,7 +1,6 @@
 package com.example.demo.service;
 
 import com.example.demo.config.JwtTokenProvider;
-import com.example.demo.domain.UserData;
 import com.example.demo.dto.signDto.SignUpDto;
 import com.example.demo.dto.tokenDto.JwtToken;
 import com.example.demo.dto.userDto.UserDataDto;
@@ -12,12 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.lang.reflect.Member;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,22 +28,19 @@ public class UserCertificationService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
-    public JwtToken signIn(String email,String passWord){
-
+    public JwtToken login(String email, String passWord){
         //Spring Security에서 사용하는 인증용 토큰 객체 생성 -> 아직 인증된 상태 x
-        UsernamePasswordAuthenticationToken authenticationToken
-                = new UsernamePasswordAuthenticationToken(email,passWord);
-        Authentication authentication = authenticationManagerBuilder.getObject().authenticate(
-                authenticationToken);
-        return jwtTokenProvider.generateToken(authentication);
-
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(email,passWord);
+            Authentication authentication = authenticationManagerBuilder.getObject().authenticate(
+                    authenticationToken);
+            return jwtTokenProvider.generateToken(authentication);
     }
 
     //회원가입 요청을 받아 DB에 저장하고 UserDataDto 반환
     @Transactional
     public UserDataDto signUp(SignUpDto signUpDto){
         if(userDataRepository.findByEmail(signUpDto.getEmail()).isPresent()){
-            throw new IllegalArgumentException("중복된 Email 입니다.");
+            throw new IllegalArgumentException();
         }
         String encodedPassword = passwordEncoder.encode(signUpDto.getPassword());
         List<Role> roles = new ArrayList<>();
