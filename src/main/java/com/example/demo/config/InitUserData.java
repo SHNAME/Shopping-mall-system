@@ -1,5 +1,6 @@
 package com.example.demo.config;
 
+import com.example.demo.domain.Address;
 import com.example.demo.domain.UserData;
 import com.example.demo.en.Role;
 import com.example.demo.repository.UserDataRepository;
@@ -28,6 +29,9 @@ public class InitUserData {
                         .nickname("테스트유저")
                         .roles(Collections.singletonList(Role.ROLE_USER))
                         .build();
+
+                Address address = new Address("name","01012345678","testAddress");
+                user.setAddress(address);
                 userDataRepository.save(user);
 
             }

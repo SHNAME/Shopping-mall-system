@@ -42,6 +42,12 @@ dependencies {
 	implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
+	//Redis
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	
+	//인증을 위한 Apache dependency
+	implementation 'org.apache.commons:commons-lang3:3.12.0'
+
 
 }
 
