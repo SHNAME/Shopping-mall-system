@@ -71,5 +71,32 @@ public class UserController {
 
     }
 
+    @PostMapping("/sms/sendCode/password")
+    public ResponseEntity<?>passwordCheck(@RequestBody SendCodePasswordRequest request)
+    {
+        try{
+            SendCodeResponse result = userService.passwordCheck(request);
+            return ResponseEntity.ok(result);
+        }catch (NullPointerException | IllegalArgumentException e){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+
+    }
+
+    @PostMapping("/sms/proofCode/password")
+    public ResponseEntity<?>passwordProve(@RequestBody CodeProofRequest request){
+        try{
+            CodeProofResponsePassword result = userService.passwordProve(request);
+            if(result.isVerified())  return ResponseEntity.ok(result);
+            else return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
+        }catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+        catch (IllegalStateException e){
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(e.getMessage());
+        }
+    }
+
+
 
 }
