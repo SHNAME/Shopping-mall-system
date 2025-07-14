@@ -43,7 +43,7 @@ public class UserController {
     }
 
     @PostMapping("/sms/sendCode/email")
-    public ResponseEntity<?> emailCheck(@RequestBody SendCodeRequest request)
+    public ResponseEntity<?> emailCheck(@RequestBody SendCodeEmailRequest request)
     {
         try{
             SendCodeResponse result = userService.emailCheck(request);

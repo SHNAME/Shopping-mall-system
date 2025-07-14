@@ -57,20 +57,13 @@ public class UserService {
         return UserDataDto.toDto(userDataRepository.save(signUpDto.toEntity(encodedPassword, roles)));
     }
 
-    public SendCodeResponse emailCheck(SendCodeRequest request) {
+    public SendCodeResponse emailCheck(SendCodeEmailRequest request) {
         Optional<UserData> optionalUser = userDataRepository.findByAddress_phoneNumber(request.getPhoneNumber());
 
         if (optionalUser.isEmpty()) {
             throw new IllegalArgumentException("사용자를 찾을 수 없습니다.");
         }
-
         UserData user = optionalUser.get();
-
-        if (!user.getEmail().equals(request.getEmail()) ||
-                !user.getAddress().getPhoneNumber().equals(request.getPhoneNumber())) {
-            throw new IllegalArgumentException("전화번호 또는 이메일이 일치하지 않습니다.");
-        }
-
         String authCode = RandomStringUtils.randomAlphanumeric(8);
         redisTemplate.opsForValue().set(PREFIX + request.getPhoneNumber(), authCode, Duration.ofMinutes(3));
 
@@ -102,6 +95,11 @@ public class UserService {
         }
 
     }
+
+  //  public SendCodeResponse passwordCheck()
+
+
+
 
     private String maskEmail(String email){
         int at = email.indexOf('@');

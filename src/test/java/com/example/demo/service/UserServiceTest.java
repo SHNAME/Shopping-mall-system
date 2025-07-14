@@ -165,7 +165,7 @@ class UserServiceTest {
         //given
         String phoneNumber = "01012345678";
         String email = "test@example.com";
-        SendCodeRequest request = new SendCodeRequest(email,phoneNumber);
+        SendCodeEmailRequest request = new SendCodeEmailRequest(phoneNumber);
         Address address = new Address("test",phoneNumber,"test_line");
         UserData userData = UserData.builder().email(email).build();
         userData.setAddress(address);
@@ -182,7 +182,7 @@ class UserServiceTest {
     //요청한 사용자가 없는 경우
     @Test
     void emailCheckFail(){
-        SendCodeRequest request = new SendCodeRequest("test@naver.com", "010101010");
+        SendCodeEmailRequest request = new SendCodeEmailRequest( "010101010");
         when(userDataRepository.findByAddress_phoneNumber(request.getPhoneNumber())).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () ->

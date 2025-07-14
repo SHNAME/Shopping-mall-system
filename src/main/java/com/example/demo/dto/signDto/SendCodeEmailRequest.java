@@ -9,7 +9,6 @@ import lombok.ToString;
 @Setter
 @ToString
 @AllArgsConstructor
-public class SendCodeRequest {
-    String email;
+public class SendCodeEmailRequest {
     String phoneNumber;
 }
