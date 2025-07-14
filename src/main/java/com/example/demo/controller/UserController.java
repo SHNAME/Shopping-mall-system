@@ -3,7 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.signDto.*;
 import com.example.demo.dto.tokenDto.JwtToken;
 import com.example.demo.dto.userDto.UserDataDto;
-import com.example.demo.service.UserCertificationService;
+import com.example.demo.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/auth")
 public class UserController {
-    private final UserCertificationService userCertificationService;
+    private final UserService userService;
 
 
     @PostMapping("/login")
@@ -24,7 +24,7 @@ public class UserController {
         String email = signInDto.getEmail();
         String password = signInDto.getPassword();
         try{
-            JwtToken jwtToken = userCertificationService.login(email,password);
+            JwtToken jwtToken = userService.login(email,password);
             return ResponseEntity.status(HttpStatus.OK).body(jwtToken);
         }catch (AuthenticationException ex){
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("아이디 또는 비밀번호가 일치하지 않습니다.");
@@ -34,7 +34,7 @@ public class UserController {
     @PostMapping("/signUp")
     public ResponseEntity<?>signUp(@RequestBody SignUpDto signUpDto){
         try{
-            UserDataDto savedUserDataDto = userCertificationService.signUp(signUpDto);
+            UserDataDto savedUserDataDto = userService.signUp(signUpDto);
             return ResponseEntity.ok(savedUserDataDto);
         }catch(IllegalArgumentException e){
             return ResponseEntity.status(HttpStatus.CONFLICT).body("이메일 중복이 발생했습니다");
@@ -46,7 +46,7 @@ public class UserController {
     public ResponseEntity<?> emailCheck(@RequestBody SendCodeRequest request)
     {
         try{
-            SendCodeResponse result = userCertificationService.emailCheck(request);
+            SendCodeResponse result = userService.emailCheck(request);
             return ResponseEntity.ok(result);
         }catch(IllegalArgumentException e){
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -55,7 +55,7 @@ public class UserController {
     @PostMapping("/sms/proofCode/email")
     public ResponseEntity<?>emailProve(@RequestBody CodeProofRequest request){
         try{
-            CodeProofResponseEmail result = userCertificationService.emailProve(request);
+            CodeProofResponseEmail result = userService.emailProve(request);
             if(result.isSuccess())
             {
                 return ResponseEntity.ok(result);

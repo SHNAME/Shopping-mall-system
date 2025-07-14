@@ -22,15 +22,15 @@ public class InitUserData {
     @Bean
     public CommandLineRunner initTestUser(UserDataRepository userDataRepository) {
         return args -> {
-            if (userDataRepository.findByEmail("test1234@naver.com").isEmpty()) {
+            if (userDataRepository.findByEmail("test1234@gamil.com").isEmpty()) {
                 UserData user = UserData.builder()
-                        .email("test1234@naver.com")
+                        .email("test1234@gamil.com")
                         .password(passwordEncoder.encode("1234"))  // 인코딩된 비밀번호
                         .nickname("테스트유저")
                         .roles(Collections.singletonList(Role.ROLE_USER))
                         .build();
 
-                Address address = new Address("name","01012345678","testAddress");
+                Address address = new Address("name","01011112222","testAddress");
                 user.setAddress(address);
                 userDataRepository.save(user);
 

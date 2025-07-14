@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.config.RedisTestConfig;
+import com.example.demo.domain.Address;
 import com.example.demo.domain.UserData;
 import com.example.demo.en.Role;
 import com.example.demo.repository.UserDataRepository;
@@ -10,16 +12,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -28,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Import(RedisTestConfig.class)
 class UserControllerTest {
 
     @Autowired
@@ -43,6 +50,9 @@ class UserControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private RedisTemplate<String,String> redisTemplate;
+
     //초기 세팅
     @BeforeEach
     void setUp(){
@@ -52,6 +62,8 @@ class UserControllerTest {
                 .nickname("테스트유저")
                 .roles(List.of(Role.ROLE_USER))
                 .build();
+        Address address = new Address("testName", "01012345678", "test_address");
+        user.setAddress(address);
         userDataRepository.save(user);
     }
 
@@ -130,4 +142,72 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(signUpRequest)))
                 .andExpect(status().isConflict());
     }
+
+    @Test
+    void emailCheckSuccess() throws  Exception{
+        UserData user = userDataRepository.findByEmail("test@naver.com").orElseThrow();
+        String userPhoneNumber = user.getAddress().getPhoneNumber();
+
+        Map<String,String> request = new HashMap<>();
+        request.put("email",user.getEmail());
+        request.put("phoneNumber",userPhoneNumber);
+
+        mockMvc.perform(post("/auth/sms/sendCode/email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").isString());
+
+
+
+    }
+
+    //요청한 사용자가 없는 경우
+    @Test
+    void emailCheckFail() throws  Exception{
+        Map<String,String> request = new HashMap<>();
+        request.put("email","fail@naver.com");
+        request.put("phoneNumber","111111111");
+        mockMvc.perform(post("/auth/sms/sendCode/email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void emailProveSuccess() throws Exception {
+        UserData user = userDataRepository.findByEmail("test@naver.com").orElseThrow();
+        String userPhoneNumber = user.getAddress().getPhoneNumber();
+        String code = "AABBCC1234";
+        redisTemplate.opsForValue().set("emailAuth:Phone" +userPhoneNumber,code, Duration.ofMinutes(3));
+        when(redisTemplate.opsForValue().get("emailAuth:Phone" +userPhoneNumber)).thenReturn(code);
+        Map<String,String> request = new HashMap<>();
+        request.put("phoneNumber",userPhoneNumber);
+        request.put("code",code);
+
+        mockMvc.perform(post("/auth/sms/proofCode/email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                 .andExpect(status().isOk());
+    }
+
+    //인증번호 실패
+    @Test
+    void emailProveFail() throws  Exception{
+        UserData user = userDataRepository.findByEmail("test@naver.com").orElseThrow();
+        String userPhoneNumber = user.getAddress().getPhoneNumber();
+        String code = "AABBCC1234";
+        redisTemplate.opsForValue().set("emailAuth:Phone" +userPhoneNumber,code, Duration.ofMinutes(3));
+        when(redisTemplate.opsForValue().get("emailAuth:Phone" +userPhoneNumber)).thenReturn(code);
+        Map<String,String> request = new HashMap<>();
+        request.put("phoneNumber",userPhoneNumber);
+        request.put("code","TEST1234");
+
+        mockMvc.perform(post("/auth/sms/proofCode/email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+
+    }
+
 }

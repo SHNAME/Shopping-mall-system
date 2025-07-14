@@ -1,11 +1,11 @@
 package com.example.demo.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Getter
+@NoArgsConstructor
 public class Address {
 
     @Id
@@ -27,14 +27,13 @@ public class Address {
     @Setter
     private UserData user;
 
-    public Address(String name,String phoneNumber,String address_line){
+    public Address(String name, String phoneNumber, String address_line){
         this.name = name;
-        this.phoneNumber = phoneNumber;
         this.address_line = address_line;
+        this.phoneNumber = phoneNumber;
     }
 
-    public Address() {
 
-    }
+
 
 }

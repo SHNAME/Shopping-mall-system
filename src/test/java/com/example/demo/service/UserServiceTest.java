@@ -1,17 +1,21 @@
 package com.example.demo.service;
 
 import com.example.demo.config.JwtTokenProvider;
+import com.example.demo.domain.Address;
 import com.example.demo.domain.UserData;
-import com.example.demo.dto.signDto.SignUpDto;
+import com.example.demo.dto.signDto.*;
 import com.example.demo.dto.tokenDto.JwtToken;
 import com.example.demo.dto.userDto.UserDataDto;
 import com.example.demo.en.Role;
 import com.example.demo.repository.UserDataRepository;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -30,10 +35,10 @@ import static org.mockito.Mockito.*;
 
 //Login 및 SingUp Unit Test
 @ExtendWith(MockitoExtension.class)
-class UserCertificationServiceTest {
+class UserServiceTest {
 
     @InjectMocks
-    private UserCertificationService userCertificationService;
+    private UserService userService;
     @Mock
     private UserDataRepository userDataRepository;
 
@@ -43,8 +48,6 @@ class UserCertificationServiceTest {
     @Mock
     private JwtTokenProvider jwtTokenProvider;
 
-
-
     @Mock
     private Authentication authentication;
 
@@ -53,6 +56,15 @@ class UserCertificationServiceTest {
 
     @Mock
     private AuthenticationManagerBuilder authenticationManagerBuilder;
+
+    @Mock
+    private RedisTemplate<String,String> redisTemplate;
+
+    @Mock
+    private ValueOperations<String,String> valueOperations;
+
+    private static  final String PREFIX="emailAuth:Phone";
+
 
 
     @Test
@@ -67,7 +79,7 @@ class UserCertificationServiceTest {
         given(authenticationManager.authenticate(authToken)).willReturn(authentication);
         given(jwtTokenProvider.generateToken(authentication)).willReturn(token);
 
-        JwtToken result = userCertificationService.login(email, password);
+        JwtToken result = userService.login(email, password);
 
 
 
@@ -86,7 +98,7 @@ class UserCertificationServiceTest {
         given(authenticationManagerBuilder.getObject()).willReturn(authenticationManager);
         given(authenticationManager.authenticate(authToken)).willThrow(new BadCredentialsException("login Fail"));
         assertThrows(BadCredentialsException.class,()->{
-            userCertificationService.login(email,password);
+            userService.login(email,password);
         });
 
 
@@ -118,7 +130,7 @@ class UserCertificationServiceTest {
 
         //when
 
-        UserDataDto result = userCertificationService.signUp(dto);
+        UserDataDto result = userService.signUp(dto);
 
         //then
         assertThat(result.getEmail()).isEqualTo(dto.getEmail());
@@ -141,9 +153,83 @@ class UserCertificationServiceTest {
         when(userDataRepository.findByEmail(dto.getEmail()))
                 .thenReturn(Optional.of(mock(UserData.class)));
         assertThrows(IllegalArgumentException.class,() ->{
-            userCertificationService.signUp(dto);
+            userService.signUp(dto);
         });
 
         verify(userDataRepository,never()).save(any());
     }
+
+
+    @Test
+    void emailCheckSuccess(){
+        //given
+        String phoneNumber = "01012345678";
+        String email = "test@example.com";
+        SendCodeRequest request = new SendCodeRequest(email,phoneNumber);
+        Address address = new Address("test",phoneNumber,"test_line");
+        UserData userData = UserData.builder().email(email).build();
+        userData.setAddress(address);
+
+        when(userDataRepository.findByAddress_phoneNumber(phoneNumber)).thenReturn(Optional.of(userData));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        SendCodeResponse sendCodeResponse = userService.emailCheck(request);
+
+        Assertions.assertThat(sendCodeResponse.getMessage()).isEqualTo("인증번호 발급 성공");
+        Assertions.assertThat(sendCodeResponse.getCode()).isNotNull();
+
+    }
+    //요청한 사용자가 없는 경우
+    @Test
+    void emailCheckFail(){
+        SendCodeRequest request = new SendCodeRequest("test@naver.com", "010101010");
+        when(userDataRepository.findByAddress_phoneNumber(request.getPhoneNumber())).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () ->
+                userService.emailCheck(request));
+    }
+
+    @Test
+    void emailProveSuccess(){
+        String phone = "01012345678";
+        String email = "test@naver.com";
+        String code = "ABC12345";
+        CodeProofRequest request = new CodeProofRequest(phone, code);
+        UserData user = UserData.builder().email(email).build();
+        Address address = new Address("test",phone,"test_addressLine");
+        user.setAddress(address);
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(PREFIX +phone)).thenReturn(code);
+        when(userDataRepository.findByAddress_phoneNumber(phone)).thenReturn(Optional.of(user));
+
+        //when
+        CodeProofResponseEmail response = userService.emailProve(request);
+
+        assertTrue(response.isSuccess());
+        assertTrue(response.getEmail().contains("*"));
+
+    }
+
+    //인증번호 불일치
+    @Test
+    void emailProveFail(){
+        String phone = "01012345678";
+        String email = "test@naver.com";
+        String myCode = "ABC12345";
+        String redisCode = "ABC11111";
+        CodeProofRequest request = new CodeProofRequest(phone, myCode);
+        UserData user = UserData.builder().email(email).build();
+        Address address = new Address("test",phone,"test_addressLine");
+        user.setAddress(address);
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(PREFIX +phone)).thenReturn(redisCode);
+
+        CodeProofResponseEmail response = userService.emailProve(request);
+        assertFalse(response.isSuccess());
+        assertFalse(response.getEmail().contains("*"));
+
+    }
+
 }
