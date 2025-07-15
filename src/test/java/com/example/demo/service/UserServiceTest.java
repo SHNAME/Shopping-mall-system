@@ -65,8 +65,6 @@ class UserServiceTest {
 
     private static  final String PREFIX="emailAuth:Phone";
 
-
-
     @Test
     void LoginSuccess() {
         String email = "test@naver.com";
@@ -159,7 +157,6 @@ class UserServiceTest {
         verify(userDataRepository,never()).save(any());
     }
 
-
     @Test
     void emailCheckSuccess(){
         //given
@@ -229,6 +226,80 @@ class UserServiceTest {
         CodeProofResponseEmail response = userService.emailProve(request);
         assertFalse(response.isSuccess());
         assertFalse(response.getEmail().contains("*"));
+
+    }
+
+    @Test
+    void passwordCheckSuccess(){
+        //given
+        String phoneNumber = "01012345678";
+        String email = "test@example.com";
+
+        SendCodePasswordRequest request = new SendCodePasswordRequest(email,phoneNumber);
+        UserData userData = UserData.builder().email(email).build();
+        Address address = new Address("test",phoneNumber,"test_line");
+        userData.setAddress(address);
+
+        when(userDataRepository.findByEmail(email)).thenReturn(Optional.of(userData));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        //when
+        SendCodeResponse result = userService.passwordCheck(request);
+
+        //then
+        Assertions.assertThat(result.getCode()).isNotNull();
+        Assertions.assertThat(result.getMessage()).isEqualTo("인증번호 발송 성공");
+
+    }
+
+    //이메일이 DB에 존재하지 않는 경우
+    @Test
+    void passwordCheckFail(){
+        //given
+        String phoneNumber = "01012345678";
+        String email = "test@example.com";
+
+        SendCodePasswordRequest request = new SendCodePasswordRequest(email,phoneNumber);
+        when(userDataRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+        //when
+        //then
+        assertThrows(IllegalArgumentException.class, () ->userService.passwordCheck(request));
+
+    }
+
+    @Test
+    void passwordProveSuccess(){
+        //given
+        String phoneNumber = "01012345678";
+        String code = "AABBCC";
+        CodeProofRequest request = new CodeProofRequest(phoneNumber, code);
+        UserData userData = UserData.builder().build();
+        Address address = new Address("test",phoneNumber,"test_line");
+        userData.setAddress(address);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn(code);
+        when(userDataRepository.findByAddress_phoneNumber(phoneNumber)).thenReturn(Optional.of(userData));
+
+        //when
+        CodeProofResponsePassword result = userService.passwordProve(request);
+        //then
+        Assertions.assertThat(result.isVerified()).isTrue();
+    }
+
+    //인증번호가 틀린 경우
+    @Test
+    void passwordProveFail(){
+        //given
+        String phoneNumber = "01012345678";
+        String code = "AABBCC";
+        CodeProofRequest request = new CodeProofRequest(phoneNumber, code);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn("AABBC");
+        //when
+        CodeProofResponsePassword result = userService.passwordProve(request);
+        //then
+        Assertions.assertThat(result.isVerified()).isFalse();
 
     }
 

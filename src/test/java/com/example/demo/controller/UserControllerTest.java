@@ -3,8 +3,10 @@ package com.example.demo.controller;
 import com.example.demo.config.RedisTestConfig;
 import com.example.demo.domain.Address;
 import com.example.demo.domain.UserData;
+import com.example.demo.dto.signDto.SendCodePasswordRequest;
 import com.example.demo.en.Role;
 import com.example.demo.repository.UserDataRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,16 +55,18 @@ class UserControllerTest {
     @Autowired
     private RedisTemplate<String,String> redisTemplate;
 
+    private static final  String EMAIL = "test@naver.com";
+    private static final String PHONE_NUMBER = "test@naver.com";
     //초기 세팅
     @BeforeEach
     void setUp(){
         UserData user = UserData.builder()
-                .email("test@naver.com")
+                .email(EMAIL)
                 .password(passwordEncoder.encode("test1234"))
                 .nickname("테스트유저")
                 .roles(List.of(Role.ROLE_USER))
                 .build();
-        Address address = new Address("testName", "01012345678", "test_address");
+        Address address = new Address("testName", PHONE_NUMBER, "test_address");
         user.setAddress(address);
         userDataRepository.save(user);
     }
@@ -71,7 +75,7 @@ class UserControllerTest {
     @Test
     void LoginSuccess() throws Exception {
         Map<String, String> request = new HashMap<>();
-        request.put("email", "test@naver.com");
+        request.put("email", EMAIL);
         request.put("password", "test1234");
         mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -97,7 +101,7 @@ class UserControllerTest {
     @Test
     void LoginPassWordMismatch() throws Exception{
         Map<String, String> request = new HashMap<>();
-        request.put("email", "test@naver.com");
+        request.put("email", EMAIL);
         request.put("password", "test12121234");
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -130,7 +134,7 @@ class UserControllerTest {
     @Test
     void signUpFail() throws Exception {
         Map<String,String> signUpRequest = new HashMap<>();
-        signUpRequest.put("email","test@naver.com");
+        signUpRequest.put("email",EMAIL);
         signUpRequest.put("password","new1234");
         signUpRequest.put("nickName","test");
         signUpRequest.put("name","testName");
@@ -145,7 +149,7 @@ class UserControllerTest {
 
     @Test
     void emailCheckSuccess() throws  Exception{
-        UserData user = userDataRepository.findByEmail("test@naver.com").orElseThrow();
+        UserData user = userDataRepository.findByEmail(EMAIL).orElseThrow();
         String userPhoneNumber = user.getAddress().getPhoneNumber();
 
         Map<String,String> request = new HashMap<>();
@@ -176,7 +180,7 @@ class UserControllerTest {
 
     @Test
     void emailProveSuccess() throws Exception {
-        UserData user = userDataRepository.findByEmail("test@naver.com").orElseThrow();
+        UserData user = userDataRepository.findByEmail(EMAIL).orElseThrow();
         String userPhoneNumber = user.getAddress().getPhoneNumber();
         String code = "AABBCC1234";
         redisTemplate.opsForValue().set("emailAuth:Phone" +userPhoneNumber,code, Duration.ofMinutes(3));
@@ -194,7 +198,7 @@ class UserControllerTest {
     //인증번호 실패
     @Test
     void emailProveFail() throws  Exception{
-        UserData user = userDataRepository.findByEmail("test@naver.com").orElseThrow();
+        UserData user = userDataRepository.findByEmail(EMAIL).orElseThrow();
         String userPhoneNumber = user.getAddress().getPhoneNumber();
         String code = "AABBCC1234";
         redisTemplate.opsForValue().set("emailAuth:Phone" +userPhoneNumber,code, Duration.ofMinutes(3));
@@ -209,5 +213,81 @@ class UserControllerTest {
                 .andExpect(status().isUnauthorized());
 
     }
+
+
+    @Test
+    void passwordCheckSuccess() throws Exception {
+        UserData user = userDataRepository.findByEmail(EMAIL).orElseThrow();
+        String userPhoneNumber = user.getAddress().getPhoneNumber();
+        Map<String,String> request = new HashMap<>();
+        request.put("email",user.getEmail());
+        request.put("phoneNumber",userPhoneNumber);
+
+        mockMvc.perform(post("/auth/sms/sendCode/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").isString());
+    }
+
+    //해당 이메일 존재 하지 않는 경우
+    @Test
+    void passwordCheckFail() throws Exception {
+        Map<String,String> request = new HashMap<>();
+        request.put("email","Fail@gmail.com");
+        request.put("phoneNumber",PHONE_NUMBER);
+
+        mockMvc.perform(post("/auth/sms/sendCode/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+
+    @Test
+    void passwordProveSuccess() throws Exception{
+        //given
+        UserData user = userDataRepository.findByEmail(EMAIL).orElseThrow();
+        String userPhoneNumber = user.getAddress().getPhoneNumber();
+        String code = "AABBCC1234";
+        String key = "passwordAuth:Phone" +userPhoneNumber;
+        redisTemplate.opsForValue().set(key,code, Duration.ofMinutes(3));
+        when(redisTemplate.opsForValue().get(key)).thenReturn(code);
+        Map<String,String> request = new HashMap<>();
+        request.put("phoneNumber",userPhoneNumber);
+        request.put("code",code);
+
+        //when
+        //then
+        mockMvc.perform(post("/auth/sms/proofCode/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+    }
+
+    //인증번호 실패
+    @Test
+    void passwordProveFail() throws Exception{
+        //given
+        UserData user = userDataRepository.findByEmail(EMAIL).orElseThrow();
+        String userPhoneNumber = user.getAddress().getPhoneNumber();
+        String code = "AABBCC1234";
+        String key = "passwordAuth:Phone" +userPhoneNumber;
+        redisTemplate.opsForValue().set(key,code, Duration.ofMinutes(3));
+        when(redisTemplate.opsForValue().get(key)).thenReturn(code);
+        Map<String,String> request = new HashMap<>();
+        request.put("phoneNumber",userPhoneNumber);
+        request.put("code","AABBCC12");
+
+        //when
+        //then
+        mockMvc.perform(post("/auth/sms/proofCode/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+
+
 
 }
