@@ -151,6 +151,28 @@ public class UserService {
 
     }
 
+    public ResetPasswordResponse resetPassword(ResetPasswordRequest request){
+        if(request.getNewPassword() ==null || request.getEmail() == null){
+            throw new  IllegalArgumentException("이메일 또는 비밀번호가 전송되지 않았습니다.");
+        }
+        //클라이언트가 비밀번호 인증번호 성공 후 이메일을 가지고 있다고 가정
+        Optional<UserData> data = userDataRepository.findByEmail(request.getEmail());
+        if(data.isEmpty()){
+            throw  new IllegalArgumentException("이메일 오류");
+        }
+        UserData user = data.get();
+        String key = RESET_PASSWORD_PREFIX + user.getEmail();
+        String resettable = redisTemplate.opsForValue().get(key);
+        if(resettable !=null && resettable.equals("true")){
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+             userDataRepository.save(user);
+            redisTemplate.delete(key);
+            return new ResetPasswordResponse(true,"비밀번호 변경에 성공했습니다.");
+        }
+        else
+            throw new RedisConnectionFailureException("Redis 연결 실패");
+        }
+
     private String maskEmail(String email){
         int at = email.indexOf('@');
         //앞에 글자가 1개 이하인 경우
@@ -161,10 +183,7 @@ public class UserService {
 
     }
 
-
-
-
-
-
-
 }
+
+
+

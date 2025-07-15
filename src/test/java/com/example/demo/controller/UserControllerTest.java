@@ -3,10 +3,9 @@ package com.example.demo.controller;
 import com.example.demo.config.RedisTestConfig;
 import com.example.demo.domain.Address;
 import com.example.demo.domain.UserData;
-import com.example.demo.dto.signDto.SendCodePasswordRequest;
+import com.example.demo.dto.signDto.ResetPasswordRequest;
 import com.example.demo.en.Role;
 import com.example.demo.repository.UserDataRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,12 +21,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -59,12 +56,12 @@ class UserControllerTest {
     private static final String PHONE_NUMBER = "test@naver.com";
     //초기 세팅
     @BeforeEach
-    void setUp(){
+    void initData(){
         UserData user = UserData.builder()
                 .email(EMAIL)
                 .password(passwordEncoder.encode("test1234"))
                 .nickname("테스트유저")
-                .roles(List.of(Role.ROLE_USER))
+                .roles(new ArrayList<>(List.of(Role.ROLE_USER)))
                 .build();
         Address address = new Address("testName", PHONE_NUMBER, "test_address");
         user.setAddress(address);
@@ -286,6 +283,42 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void resetPasswordSuccess() throws Exception{
+        //given
+        UserData userData = userDataRepository.findByEmail(EMAIL).get();
+        String newPassword = "password";
+        String key = "reset-auth:email"+userData.getEmail();
+        ResetPasswordRequest request = new ResetPasswordRequest(userData.getEmail(), newPassword);
+
+        redisTemplate.opsForValue().set(key,"true",Duration.ofMinutes(3));
+        when(redisTemplate.opsForValue().get(key)).thenReturn("true");
+
+        //when
+        //then
+        mockMvc.perform(patch("/auth/resetPassword")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+    }
+
+    //클라이언트가 Email을 잘못 전송한 경우
+    @Test
+    void resetPasswordFail() throws Exception{
+        //given
+        UserData userData = userDataRepository.findByEmail(EMAIL).get();
+        String newPassword = "password";
+        ResetPasswordRequest request = new ResetPasswordRequest
+                (userData.getEmail()+"aa", newPassword);
+        //when
+        //then
+        mockMvc.perform(patch("/auth/resetPassword")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
 
 
 

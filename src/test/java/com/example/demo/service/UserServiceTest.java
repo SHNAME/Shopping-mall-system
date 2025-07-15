@@ -303,4 +303,39 @@ class UserServiceTest {
 
     }
 
-}
+    @Test
+    void resetPasswordSuccess() throws Exception{
+        //given
+        String email = "test@gmail.com";
+        String newPassword = "newPassword";
+        ResetPasswordRequest request = new ResetPasswordRequest(email, newPassword);
+        UserData user = UserData.builder().email(email).build();
+
+        when(userDataRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn("true");
+        when(userDataRepository.save(any())).thenReturn(user);
+        //when
+        ResetPasswordResponse response = userService.resetPassword(request);
+        //then
+        Assertions.assertThat(response.isResult()).isTrue();
+        verify(userDataRepository).save(user);
+        verify(redisTemplate).delete( "reset-auth:email" + email);
+    }
+
+
+    //클라이언트가 Email을 잘못 전송한 경우
+    @Test
+    void resetPasswordFail() throws Exception{
+        //given
+        String email = "test@gmail.com";
+        String newPassword = "newPassword";
+        ResetPasswordRequest request = new ResetPasswordRequest(email, newPassword);
+        when(userDataRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+        //when
+        //then
+        assertThrows(IllegalArgumentException.class, () -> userService.resetPassword(request));
+    }
+
+    }

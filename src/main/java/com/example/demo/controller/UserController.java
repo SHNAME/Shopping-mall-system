@@ -4,8 +4,10 @@ import com.example.demo.dto.signDto.*;
 import com.example.demo.dto.tokenDto.JwtToken;
 import com.example.demo.dto.userDto.UserDataDto;
 import com.example.demo.service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
@@ -93,6 +95,21 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
         catch (IllegalStateException e){
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(e.getMessage());
+        }
+    }
+
+    @PatchMapping("/resetPassword")
+    public ResponseEntity<?>resetPassword(@RequestBody ResetPasswordRequest request){
+        try{
+            ResetPasswordResponse result = userService.resetPassword(request);
+            log.info(result.toString());
+            return ResponseEntity.ok().body(result);
+        } catch(IllegalArgumentException e) {
+            log.info(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+        catch (RedisConnectionFailureException e){
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(e.getMessage());
         }
     }
